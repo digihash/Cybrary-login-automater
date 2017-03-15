@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 
-CYBPATH=""
+#e.g.: "/home/testuser/Cybrary-login-automater"
+CYBPATH="<absolute_path_of_your_folder>"
 
 #get the next date
 date=`date -d "next day" +%e | cut -d ' ' -f 2`
 
 #create the new cron job
-cjob="0 7-23 $date-31 * * /bin/bash -c \"/usr/bin/flock -n /tmp/cyb.lockfile -c $CYBPATH/get_cybytes.py 2>> $CYBPATH/cron_error >> $CYBPATH/cron_out\""
+cjob="0 3 * * * /bin/bash -c \"/usr/bin/flock -n /tmp/cyb.lockfile -c $CYBPATH/get_cybytes.py 2>> $CYBPATH/cron_error >> $CYBPATH/cron_out\""
 
 #grep cron jobs other than the job created above and add them into the jobs file
 #remove empty lines

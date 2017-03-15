@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import time, pycurl, cStringIO, subprocess
+import os, time, pycurl, cStringIO, subprocess
 from bs4 import BeautifulSoup
 
 def append_log(out, file):
@@ -30,16 +30,22 @@ def create_curl_obj(login_url, data, ua):
 
 def fetch_last_cyb(file):
     with open(file, 'r+') as f:
-        #seek the last 4 chars of the file
-        f.seek(-4, 2)
-        #remove the last char which is \n
-        cyb = int(f.readline()[:-1])
-        return cyb
+        #seek the last 28 chars of the file so you start on the last 2 lines
+        f.seek(-28, os.SEEK_END)
+        # Read the line and filter out the Integer value.
+	totalcyb = getInteger(f.readline())
+        cyb = getInteger(f.readline())
+        return (totalcyb, cyb)
     f.close()    
+
+# get the integer out of a string
+def getInteger(str1):
+    return int(filter(str.isdigit, str1))
 
 def login(login_url, iurl, data, ua):
     out = "Logging In..." + "\n"
 
+    totalcybytes = 0
     cybytes = 0
     headers = cStringIO.StringIO()
     body = cStringIO.StringIO()
@@ -78,35 +84,39 @@ def login(login_url, iurl, data, ua):
         out += "Error logging in!! Fetch Status: " + str(fstatus) + "\n"
         return (out, fstatus, cybytes)
     soup = BeautifulSoup(body.getvalue(), 'html.parser')
-    cybytes = int(soup.find("div", {"class": "cybytenumber"}).text.strip())
+    cybytes_list = soup.find_all("div", class_="cybytes")
+    totalcybytes = int(cybytes_list[0].text.strip())
+    cybytes = int(cybytes_list[1].text.strip())
     out += "Login Successful!!" + "\n"
-    return (out, cybytes)
+    return (out, totalcybytes, cybytes)
 
 def main():
-    cybpath = <absolute_path_of_your_folder>
+    # e.g.: "/home/testuser/Cybrary-login-automater/"
+    cybpath = "<absolute_path_of_your_folder_with_slash_at_end"
     logfile = cybpath + 'cybrary.log'
     schfile = cybpath + 'reschedule_jobs'
-    last_cyb = fetch_last_cyb(logfile)
-    user = <your_username>
-    password = <your_password>
+    last_total_cyb, last_cyb = fetch_last_cyb(logfile)
+    user = "<your_username>"
+    password = "<your_password>"
     login_url = 'https://www.cybrary.it/wp-login.php'
-    iurl = 'https://www.cybrary.it/members/' + user + '/messages'
+    iurl = 'https://www.cybrary.it/'
     data = 'log=' + user + '&pwd=' + password + '&wp-submit=Log+In&redirect_to=&testcookie=1'
-    ua = 'Mozilla/5.0 (Windows; U; Windows NT 6.1; it; rv:1.9.2.3) Gecko/20100401 Firefox/3.6.3 (.NET CLR 3.5.30729)'
+    ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
     
     output = "Updating cybytes on " + time.strftime("%c") + "\n"
     
     #check login
-    out, cybytes = login(login_url, iurl, data, ua)
+    out, totalcybytes, cybytes = login(login_url, iurl, data, ua)
     output += out
     if cybytes == 0 or cybytes == -1:
+        output += "Total Cybytes: " + str(last_total_cyb) + "\n"
         output += "Cybytes: " + str(last_cyb) + "\n"
     else:
     	output += "Running Scheduler\n"
     	subprocess.call(schfile)
     	output += "Job Rescheduled\n"
+	output += "Total Cybytes: " + str(totalcybytes) + "\n"
     	output += "Cybytes: " + str(cybytes) + "\n"    
-    #print output
     append_log(output, logfile)
 
 
